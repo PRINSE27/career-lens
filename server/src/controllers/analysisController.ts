@@ -1,7 +1,19 @@
 import type { Request, Response } from "express";
 import prisma from "../services/prisma.js";
 
-export const analyzeResume = async (req: Request, res: Response) => {
+import {
+  extractResumeInformation,
+  analyzeResumeProfile,
+} from "../services/aiService.js";
+
+// ============================================================
+// ANALYZE RESUME USING GENAI
+// ============================================================
+
+export const analyzeResume = async (
+  req: Request,
+  res: Response
+) => {
   try {
     const resumeId = Number(req.params.resumeId);
 
@@ -19,7 +31,10 @@ export const analyzeResume = async (req: Request, res: Response) => {
       });
     }
 
+    // --------------------------------------------------------
     // Get resume belonging to logged-in user
+    // --------------------------------------------------------
+
     const resume = await prisma.resume.findFirst({
       where: {
         id: resumeId,
@@ -37,89 +52,202 @@ export const analyzeResume = async (req: Request, res: Response) => {
     if (!resume.extractedText) {
       return res.status(400).json({
         success: false,
-        message: "Resume text has not been extracted",
+        message:
+          "Resume text has not been extracted",
       });
     }
 
-    /*
-      Temporary analysis logic.
-
-      We will replace this with the real
-      CareerLens analysis engine later.
-    */
-
-    const text = resume.extractedText.toLowerCase();
-
-    const possibleSkills = [
-      "python",
-      "java",
-      "c++",
-      "javascript",
-      "typescript",
-      "react",
-      "node.js",
-      "express",
-      "sql",
-      "postgresql",
-      "mongodb",
-      "docker",
-      "kubernetes",
-      "tensorflow",
-      "pytorch",
-      "machine learning",
-      "deep learning",
-    ];
-
-    const detectedSkills = possibleSkills.filter((skill) =>
-      text.includes(skill.toLowerCase())
+    console.log(
+      `Starting GenAI analysis for resume ${resume.id}...`
     );
 
-    const score = Math.min(
-      100,
-      40 + detectedSkills.length * 4
+    // --------------------------------------------------------
+    // STEP 1: AI extracts complete resume profile
+    // --------------------------------------------------------
+
+    const profile =
+      await extractResumeInformation(
+        resume.extractedText
+      );
+
+    console.log(
+      "Resume information extracted successfully"
     );
 
-    const skillGaps = possibleSkills
-      .filter((skill) => !detectedSkills.includes(skill))
-      .slice(0, 5);
+    // --------------------------------------------------------
+    // STEP 2: AI analyzes the extracted profile
+    // --------------------------------------------------------
 
-    const summary =
-      detectedSkills.length > 0
-        ? `Your resume contains ${detectedSkills.length} recognized technical skills.`
-        : "Your resume needs more clearly defined technical skills.";
+    const aiAnalysis =
+      await analyzeResumeProfile(profile);
 
-    // Create or update analysis
-    const analysis = await prisma.resumeAnalysis.upsert({
-      where: {
-        resumeId: resume.id,
-      },
-      update: {
-        score,
-        summary,
-        skills: detectedSkills,
-        skillGaps,
-      },
-      create: {
-        resumeId: resume.id,
-        userId: req.userId,
-        score,
-        summary,
-        skills: detectedSkills,
-        skillGaps,
-      },
-    });
+    console.log(
+      "Resume AI analysis completed successfully"
+    );
+
+    // --------------------------------------------------------
+    // STEP 3: Save everything in PostgreSQL
+    // --------------------------------------------------------
+
+    const analysis =
+      await prisma.resumeAnalysis.upsert({
+        where: {
+          resumeId: resume.id,
+        },
+
+        update: {
+          score: aiAnalysis.score,
+
+          summary: aiAnalysis.summary,
+
+          skills: profile.skills,
+
+          education: profile.education,
+
+          experience: profile.experience,
+
+          projects: profile.projects,
+
+          skillGaps: aiAnalysis.skillGaps,
+        },
+
+        create: {
+          resumeId: resume.id,
+
+          userId: req.userId,
+
+          score: aiAnalysis.score,
+
+          summary: aiAnalysis.summary,
+
+          skills: profile.skills,
+
+          education: profile.education,
+
+          experience: profile.experience,
+
+          projects: profile.projects,
+
+          skillGaps: aiAnalysis.skillGaps,
+        },
+      });
+
+    // --------------------------------------------------------
+    // Return AI result
+    // --------------------------------------------------------
 
     return res.status(200).json({
       success: true,
-      message: "Resume analyzed successfully",
-      analysis,
+
+      message:
+        "Resume analyzed successfully using GenAI",
+
+      analysis: {
+        id: analysis.id,
+
+        resumeId: analysis.resumeId,
+
+        score: analysis.score,
+
+        summary: analysis.summary,
+
+        skills: profile.skills,
+
+        education: profile.education,
+
+        experience: profile.experience,
+
+        projects: profile.projects,
+
+        skillGaps: aiAnalysis.skillGaps,
+
+        strengths: aiAnalysis.strengths,
+
+        weaknesses: aiAnalysis.weaknesses,
+
+        recommendations:
+          aiAnalysis.recommendations,
+
+        atsAnalysis:
+          aiAnalysis.atsAnalysis,
+
+        careerSuggestions:
+          aiAnalysis.careerSuggestions,
+      },
     });
   } catch (error) {
-    console.error("Resume analysis error:", error);
+    console.error(
+      "GenAI resume analysis error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
-      message: "Failed to analyze resume",
+      message:
+        "Failed to analyze resume using GenAI",
+    });
+  }
+};
+
+// ============================================================
+// GET LATEST ANALYSIS
+// ============================================================
+
+export const getLatestAnalysis = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    const analysis =
+      await prisma.resumeAnalysis.findFirst({
+        where: {
+          userId: req.userId,
+        },
+
+        orderBy: {
+          updatedAt: "desc",
+        },
+
+        include: {
+          resume: {
+            select: {
+              id: true,
+              fileName: true,
+              uploadedAt: true,
+            },
+          },
+        },
+      });
+
+    if (!analysis) {
+      return res.status(404).json({
+        success: false,
+        message:
+          "No resume analysis found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      analysis,
+    });
+  } catch (error) {
+    console.error(
+      "Get latest analysis error:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        "Failed to fetch resume analysis",
     });
   }
 };

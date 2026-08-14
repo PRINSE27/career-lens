@@ -2,7 +2,10 @@ import { Router } from "express";
 import multer from "multer";
 
 import { uploadResume } from "../controllers/resumeController.js";
-import { analyzeResume } from "../controllers/analysisController.js";
+import {
+  analyzeResume,
+  getLatestAnalysis,
+} from "../controllers/analysisController.js";
 import { authenticateToken } from "../middleware/authMiddleware.js";
 
 const router = Router();
@@ -21,6 +24,7 @@ const upload = multer({
   },
 });
 
+
 // Upload resume
 router.post(
   "/upload",
@@ -29,11 +33,21 @@ router.post(
   uploadResume
 );
 
+
+// Get latest analysis
+router.get(
+  "/latest-analysis",
+  authenticateToken,
+  getLatestAnalysis
+);
+
+
 // Analyze resume
 router.post(
   "/:resumeId/analyze",
   authenticateToken,
   analyzeResume
 );
+
 
 export default router;

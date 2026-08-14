@@ -1,6 +1,71 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Dashboard.css";
+
+type SkillGap = {
+  skill: string;
+  reason: string;
+  priority: "high" | "medium" | "low" | string;
+};
+
+const displayValue = (value: unknown): string => {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => displayValue(item))
+      .filter(Boolean)
+      .join(", ");
+  }
+
+  if (typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>)
+      .map(([key, val]) => `${key}: ${displayValue(val)}`)
+      .join(" • ");
+  }
+
+  return "";
+};
+
+interface Analysis {
+  id: number;
+  resumeId: number;
+  userId: number;
+  score: number | null;
+  summary: string | null;
+  skills: string[] | null;
+  skillGaps: string[] | null;
+  education: unknown;
+  experience: unknown;
+  projects: unknown;
+  createdAt: string;
+  updatedAt: string;
+
+  resume?: {
+    id: number;
+    fileName: string;
+    uploadedAt: string;
+  };
+}
+
+interface UploadedResume {
+  id: number;
+  fileName: string;
+  fileSize: number;
+  uploadedAt: string;
+}
+
+interface User {
+  id?: number;
+  name?: string;
+  email?: string;
+}
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -9,15 +74,81 @@ function Dashboard() {
 
   const [uploadError, setUploadError] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
 
-  const [analysis, setAnalysis] = useState<any>(null);
+  const [analysis, setAnalysis] = useState<Analysis | null>(null);
 
-  const user = JSON.parse(
-    localStorage.getItem("user") || "null"
-  );
+  const [loadingAnalysis, setLoadingAnalysis] = useState(true);
+  const [uploading, setUploading] = useState(false);
 
-  const token = localStorage.getItem("token");
+  // =========================================================
+  // GET USER FROM LOCAL STORAGE
+  // =========================================================
+
+  const getStoredUser = (): User | null => {
+    try {
+      const storedUser = localStorage.getItem("user");
+
+      if (!storedUser) {
+        return null;
+      }
+
+      return JSON.parse(storedUser);
+    } catch (error) {
+      console.error("Invalid user data in localStorage:", error);
+
+      localStorage.removeItem("user");
+
+      return null;
+    }
+  };
+
+  const user = getStoredUser();
+
+  // =========================================================
+  // FETCH LATEST ANALYSIS
+  // =========================================================
+
+  const fetchAnalysis = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      const response = await fetch(
+        "http://localhost:5000/api/resume/latest-analysis",
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.success && data.analysis) {
+        setAnalysis(data.analysis);
+      } else {
+        setAnalysis(null);
+      }
+    } catch (error) {
+      console.error("Failed to fetch analysis:", error);
+      setAnalysis(null);
+    } finally {
+      setLoadingAnalysis(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAnalysis();
+  }, [navigate]);
+
+  // =========================================================
+  // LOGOUT
+  // =========================================================
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -26,10 +157,18 @@ function Dashboard() {
     navigate("/login");
   };
 
+  // =========================================================
+  // OPEN FILE SELECTOR
+  // =========================================================
+
   const handleUploadClick = () => {
     setUploadError("");
     fileInputRef.current?.click();
   };
+
+  // =========================================================
+  // UPLOAD + GENAI ANALYSIS
+  // =========================================================
 
   const handleFileChange = async (
     e: React.ChangeEvent<HTMLInputElement>
@@ -40,37 +179,45 @@ function Dashboard() {
       return;
     }
 
-    // PDF validation
-    if (file.type !== "application/pdf") {
-      setUploadError("Please upload a PDF file.");
-      setSelectedFile(null);
-      return;
-    }
-
-    // 5 MB validation
-    const maxSize = 5 * 1024 * 1024;
-
-    if (file.size > maxSize) {
-      setUploadError("File size must be less than 5 MB.");
-      setSelectedFile(null);
-      return;
-    }
-
-    if (!token) {
-      setUploadError("Please login again.");
-      navigate("/login");
-      return;
-    }
-
-    setSelectedFile(file);
     setUploadError("");
-    setLoading(true);
-    setAnalysis(null);
+    setSelectedFile(null);
+    setUploading(true);
 
     try {
-      // -----------------------------
-      // 1. Upload resume
-      // -----------------------------
+      // =======================================================
+      // PDF VALIDATION
+      // =======================================================
+
+      if (file.type !== "application/pdf") {
+        throw new Error("Please upload a PDF file.");
+      }
+
+      // =======================================================
+      // FILE SIZE VALIDATION
+      // =======================================================
+
+      const maxSize = 5 * 1024 * 1024;
+
+      if (file.size > maxSize) {
+        throw new Error("File size must be less than 5 MB.");
+      }
+
+      setSelectedFile(file);
+
+      // =======================================================
+      // GET AUTH TOKEN
+      // =======================================================
+
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      // =======================================================
+      // STEP 1: UPLOAD RESUME
+      // =======================================================
 
       const formData = new FormData();
 
@@ -91,20 +238,20 @@ function Dashboard() {
 
       if (!uploadResponse.ok || !uploadData.success) {
         throw new Error(
-          uploadData.message || "Resume upload failed"
+          uploadData.message || "Failed to upload resume"
         );
       }
 
-      const resumeId = uploadData.resume.id;
+      const uploadedResume: UploadedResume = uploadData.resume;
 
-      console.log("Resume uploaded:", uploadData);
+      console.log("Resume uploaded:", uploadedResume);
 
-      // -----------------------------
-      // 2. Analyze resume
-      // -----------------------------
+      // =======================================================
+      // STEP 2: GENAI ANALYSIS
+      // =======================================================
 
-      const analysisResponse = await fetch(
-        `http://localhost:5000/api/resume/${resumeId}/analyze`,
+      const analyzeResponse = await fetch(
+        `http://localhost:5000/api/resume/${uploadedResume.id}/analyze`,
         {
           method: "POST",
           headers: {
@@ -113,32 +260,68 @@ function Dashboard() {
         }
       );
 
-      const analysisData = await analysisResponse.json();
+      const analyzeData = await analyzeResponse.json();
 
-      if (!analysisResponse.ok || !analysisData.success) {
+      if (!analyzeResponse.ok || !analyzeData.success) {
         throw new Error(
-          analysisData.message || "Resume analysis failed"
+          analyzeData.message || "Failed to analyze resume"
         );
       }
 
-      console.log("Resume analysis:", analysisData);
+      console.log(
+        "GenAI Resume Analysis:",
+        analyzeData.analysis
+      );
 
-      setAnalysis(analysisData.analysis);
-    } catch (error: any) {
-      console.error("Resume processing error:", error);
+      // =======================================================
+      // STEP 3: UPDATE DASHBOARD
+      // =======================================================
+
+      setAnalysis(analyzeData.analysis);
+
+    } catch (error) {
+      console.error(
+        "Resume upload/analysis error:",
+        error
+      );
 
       setUploadError(
-        error.message || "Something went wrong while analyzing resume."
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while processing your resume."
       );
+
+      setSelectedFile(null);
     } finally {
-      setLoading(false);
+      setUploading(false);
+
+      // Allow selecting the same file again
+      e.target.value = "";
     }
   };
+
+  // =========================================================
+  // SAFE DATA
+  // =========================================================
+
+  const skills = Array.isArray(analysis?.skills)
+    ? analysis.skills
+    : [];
+
+  const skillGaps = Array.isArray(analysis?.skillGaps)
+    ? analysis.skillGaps
+    : [];
+
+  // =========================================================
+  // UI
+  // =========================================================
 
   return (
     <div className="dashboard-page">
 
-      {/* SIDEBAR */}
+      {/* =====================================================
+          SIDEBAR
+      ===================================================== */}
 
       <aside className="dashboard-sidebar">
 
@@ -148,22 +331,34 @@ function Dashboard() {
 
         <nav className="dashboard-nav">
 
-          <button className="dashboard-nav-item active">
+          <button
+            className="dashboard-nav-item active"
+            type="button"
+          >
             <span>⌂</span>
             Dashboard
           </button>
 
-          <button className="dashboard-nav-item">
+          <button
+            className="dashboard-nav-item"
+            type="button"
+          >
             <span>▣</span>
             My Resumes
           </button>
 
-          <button className="dashboard-nav-item">
+          <button
+            className="dashboard-nav-item"
+            type="button"
+          >
             <span>↗</span>
             Job Matches
           </button>
 
-          <button className="dashboard-nav-item">
+          <button
+            className="dashboard-nav-item"
+            type="button"
+          >
             <span>◇</span>
             Skill Gaps
           </button>
@@ -172,13 +367,17 @@ function Dashboard() {
 
         <div className="dashboard-sidebar-bottom">
 
-          <button className="dashboard-nav-item">
+          <button
+            className="dashboard-nav-item"
+            type="button"
+          >
             <span>⚙</span>
             Settings
           </button>
 
           <button
             className="dashboard-logout"
+            type="button"
             onClick={handleLogout}
           >
             <span>↪</span>
@@ -189,11 +388,15 @@ function Dashboard() {
 
       </aside>
 
-      {/* MAIN */}
+      {/* =====================================================
+          MAIN
+      ===================================================== */}
 
       <main className="dashboard-main">
 
-        {/* HEADER */}
+        {/* ===================================================
+            HEADER
+        =================================================== */}
 
         <header className="dashboard-header">
 
@@ -216,7 +419,9 @@ function Dashboard() {
           <div className="dashboard-user">
 
             <div className="dashboard-avatar">
-              {user?.name?.charAt(0)?.toUpperCase() || "U"}
+              {user?.name
+                ?.charAt(0)
+                ?.toUpperCase() || "U"}
             </div>
 
             <div className="dashboard-user-info">
@@ -235,9 +440,13 @@ function Dashboard() {
 
         </header>
 
-        {/* STATS */}
+        {/* ===================================================
+            STATS
+        =================================================== */}
 
         <section className="dashboard-stats">
+
+          {/* RESUME SCORE */}
 
           <div className="dashboard-stat-card">
 
@@ -246,16 +455,24 @@ function Dashboard() {
             </span>
 
             <strong className="stat-value">
-              {analysis?.score ?? "—"}
+
+              {loadingAnalysis
+                ? "..."
+                : analysis?.score ?? "—"}
+
             </strong>
 
             <p className="stat-description">
+
               {analysis
-                ? "Your current resume score"
+                ? "Based on your latest AI resume analysis"
                 : "Upload a resume to analyze"}
+
             </p>
 
           </div>
+
+          {/* JOB MATCHES */}
 
           <div className="dashboard-stat-card">
 
@@ -268,30 +485,44 @@ function Dashboard() {
             </strong>
 
             <p className="stat-description">
-              No jobs analyzed yet
+              AI job matching coming next
             </p>
 
           </div>
 
+          {/* SKILL GAPS */}
+
           <div className="dashboard-stat-card">
 
             <span className="stat-label">
-              SKILLS
+              SKILL GAPS
             </span>
 
             <strong className="stat-value">
-              {analysis?.skills?.length ?? "—"}
+
+              {loadingAnalysis
+                ? "..."
+                : analysis
+                  ? skillGaps.length
+                  : "—"}
+
             </strong>
 
             <p className="stat-description">
-              Recognized technical skills
+
+              {analysis
+                ? "AI-recommended skills for improvement"
+                : "Complete your resume analysis"}
+
             </p>
 
           </div>
 
         </section>
 
-        {/* RESUME SECTION */}
+        {/* ===================================================
+            RESUME UPLOAD
+        =================================================== */}
 
         <section className="resume-section">
 
@@ -320,30 +551,31 @@ function Dashboard() {
             <div className="upload-content">
 
               <h3>
-                {loading
-                  ? "Analyzing your resume..."
-                  : "Upload your resume"}
+                Upload your resume
               </h3>
 
               <p>
                 Upload your latest PDF resume and let
-                CareerLens analyze your skills,
-                experience, projects and career potential.
+                CareerLens use AI to analyze your skills,
+                education, experience, projects and career
+                potential.
               </p>
 
               <button
                 type="button"
                 className="dashboard-primary-btn"
                 onClick={handleUploadClick}
-                disabled={loading}
+                disabled={uploading}
               >
-                {loading
-                  ? "Analyzing..."
+
+                {uploading
+                  ? "AI is analyzing..."
                   : "Upload Resume"}
 
                 <span>
-                  →
+                  {uploading ? "..." : "→"}
                 </span>
+
               </button>
 
               <input
@@ -358,7 +590,8 @@ function Dashboard() {
                 PDF files only · Maximum 5MB
               </small>
 
-              {selectedFile && (
+              {selectedFile && !uploadError && (
+
                 <div
                   style={{
                     marginTop: "10px",
@@ -368,9 +601,11 @@ function Dashboard() {
                 >
                   ✓ {selectedFile.name}
                 </div>
+
               )}
 
               {uploadError && (
+
                 <div
                   style={{
                     marginTop: "10px",
@@ -380,6 +615,7 @@ function Dashboard() {
                 >
                   {uploadError}
                 </div>
+
               )}
 
             </div>
@@ -388,22 +624,25 @@ function Dashboard() {
 
         </section>
 
-        {/* ANALYSIS RESULT */}
+        {/* ===================================================
+            ACTIVITY
+        =================================================== */}
 
-        {analysis && (
-          <section className="activity-section">
+        <section className="activity-section">
 
-            <div className="dashboard-section-label">
-              RESUME ANALYSIS
-            </div>
+          <div className="dashboard-section-label">
+            ACTIVITY
+          </div>
 
-            <div className="section-title-row">
+          <div className="section-title-row">
 
-              <h2>
-                Your career intelligence
-              </h2>
+            <h2>
+              Recent analyses
+            </h2>
 
-            </div>
+          </div>
+
+          {analysis ? (
 
             <div className="empty-activity">
 
@@ -412,44 +651,167 @@ function Dashboard() {
               </div>
 
               <h3>
-                Resume Score: {analysis.score}
+                Resume analyzed
               </h3>
 
               <p>
-                {analysis.summary}
+                {analysis.summary ||
+                  "AI analysis completed successfully."}
               </p>
 
-              {analysis.skills?.length > 0 && (
-                <div
-                  style={{
-                    marginTop: "20px",
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: "8px",
-                    justifyContent: "center",
-                  }}
-                >
-                  {analysis.skills.map(
-                    (skill: string, index: number) => (
-                      <span
-                        key={index}
-                        style={{
-                          padding: "6px 10px",
-                          borderRadius: "20px",
-                          background: "#1f2937",
-                          fontSize: "12px",
-                        }}
-                      >
-                        {skill}
-                      </span>
-                    )
-                  )}
-                </div>
+              {analysis.resume && (
+
+                <small>
+                  {analysis.resume.fileName}
+                </small>
+
               )}
 
             </div>
 
+          ) : (
+
+            <div className="empty-activity">
+
+              <div className="empty-icon">
+                ✦
+              </div>
+
+              <h3>
+                No analyses yet
+              </h3>
+
+              <p>
+                Upload your resume to generate your
+                first AI-powered career intelligence report.
+              </p>
+
+            </div>
+
+          )}
+
+        </section>
+
+        {/* ===================================================
+            DETECTED SKILLS
+        =================================================== */}
+
+        {analysis && (
+
+          <section className="activity-section">
+
+            <div className="dashboard-section-label">
+              DETECTED SKILLS
+            </div>
+
+            <div className="section-title-row">
+
+              <h2>
+                Your technical skills
+              </h2>
+
+            </div>
+
+            {skills.length > 0 ? (
+
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "8px",
+                  marginTop: "20px",
+                }}
+              >
+
+                {skills.map((skill, index) => (
+
+                  <span
+                    key={`${skill}-${index}`}
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: "8px",
+                      background:
+                        "rgba(255,255,255,0.06)",
+                      border:
+                        "1px solid rgba(255,255,255,0.1)",
+                      fontSize: "13px",
+                    }}
+                  >
+                    {skill}
+                  </span>
+
+                ))}
+
+              </div>
+
+            ) : (
+
+              <p style={{ marginTop: "20px" }}>
+                No technical skills were detected by the AI yet.
+              </p>
+
+            )}
+
           </section>
+
+        )}
+
+        {/* ===================================================
+            AI SKILL GAPS
+        =================================================== */}
+
+        {analysis && (
+
+          <section className="activity-section">
+
+            <div className="dashboard-section-label">
+              AI RECOMMENDATIONS
+            </div>
+
+            <div className="section-title-row">
+
+              <h2>
+                Skills to improve
+              </h2>
+
+            </div>
+
+            {skillGaps.length > 0 ? (
+
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "8px",
+                  marginTop: "20px",
+                }}
+              >
+
+               {skillGaps.map((item, index) => (
+  <div key={index} className="skill-gap-item">
+    <div>
+      <strong>{item.skill}</strong>
+      <p>{item.reason}</p>
+    </div>
+
+    <span className={`priority ${item.priority}`}>
+      {item.priority}
+    </span>
+  </div>
+))}
+
+              </div>
+
+            ) : (
+
+              <p style={{ marginTop: "20px" }}>
+                No skill gaps identified yet.
+              </p>
+
+            )}
+
+          </section>
+
         )}
 
       </main>
