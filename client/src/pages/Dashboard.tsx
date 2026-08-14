@@ -9,12 +9,15 @@ function Dashboard() {
 
   const [uploadError, setUploadError] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadSuccess, setUploadSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const [analysis, setAnalysis] = useState<any>(null);
 
   const user = JSON.parse(
     localStorage.getItem("user") || "null"
   );
+
+  const token = localStorage.getItem("token");
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -25,7 +28,6 @@ function Dashboard() {
 
   const handleUploadClick = () => {
     setUploadError("");
-    setUploadSuccess("");
     fileInputRef.current?.click();
   };
 
@@ -38,13 +40,10 @@ function Dashboard() {
       return;
     }
 
-    setUploadError("");
-    setUploadSuccess("");
-    setSelectedFile(null);
-
     // PDF validation
     if (file.type !== "application/pdf") {
       setUploadError("Please upload a PDF file.");
+      setSelectedFile(null);
       return;
     }
 
@@ -53,26 +52,31 @@ function Dashboard() {
 
     if (file.size > maxSize) {
       setUploadError("File size must be less than 5 MB.");
+      setSelectedFile(null);
+      return;
+    }
+
+    if (!token) {
+      setUploadError("Please login again.");
+      navigate("/login");
       return;
     }
 
     setSelectedFile(file);
-    setUploading(true);
+    setUploadError("");
+    setLoading(true);
+    setAnalysis(null);
 
     try {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        setUploadError("Authentication required. Please login again.");
-        navigate("/login");
-        return;
-      }
+      // -----------------------------
+      // 1. Upload resume
+      // -----------------------------
 
       const formData = new FormData();
 
       formData.append("resume", file);
 
-      const response = await fetch(
+      const uploadResponse = await fetch(
         "http://localhost:5000/api/resume/upload",
         {
           method: "POST",
@@ -83,34 +87,51 @@ function Dashboard() {
         }
       );
 
-      const data = await response.json();
+      const uploadData = await uploadResponse.json();
 
-      if (!response.ok) {
-        setUploadError(
-          data.message || "Resume upload failed."
+      if (!uploadResponse.ok || !uploadData.success) {
+        throw new Error(
+          uploadData.message || "Resume upload failed"
         );
-        setSelectedFile(null);
-        return;
       }
 
-      console.log("Resume uploaded successfully:", data);
+      const resumeId = uploadData.resume.id;
 
-      setUploadSuccess(
-        "Resume uploaded successfully!"
+      console.log("Resume uploaded:", uploadData);
+
+      // -----------------------------
+      // 2. Analyze resume
+      // -----------------------------
+
+      const analysisResponse = await fetch(
+        `http://localhost:5000/api/resume/${resumeId}/analyze`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
-    } catch (error) {
-      console.error("Resume upload error:", error);
+
+      const analysisData = await analysisResponse.json();
+
+      if (!analysisResponse.ok || !analysisData.success) {
+        throw new Error(
+          analysisData.message || "Resume analysis failed"
+        );
+      }
+
+      console.log("Resume analysis:", analysisData);
+
+      setAnalysis(analysisData.analysis);
+    } catch (error: any) {
+      console.error("Resume processing error:", error);
 
       setUploadError(
-        "Unable to connect to server."
+        error.message || "Something went wrong while analyzing resume."
       );
-
-      setSelectedFile(null);
     } finally {
-      setUploading(false);
-
-      // Allow selecting the same file again
-      e.target.value = "";
+      setLoading(false);
     }
   };
 
@@ -225,11 +246,13 @@ function Dashboard() {
             </span>
 
             <strong className="stat-value">
-              —
+              {analysis?.score ?? "—"}
             </strong>
 
             <p className="stat-description">
-              Upload a resume to analyze
+              {analysis
+                ? "Your current resume score"
+                : "Upload a resume to analyze"}
             </p>
 
           </div>
@@ -253,15 +276,15 @@ function Dashboard() {
           <div className="dashboard-stat-card">
 
             <span className="stat-label">
-              SKILL GAPS
+              SKILLS
             </span>
 
             <strong className="stat-value">
-              —
+              {analysis?.skills?.length ?? "—"}
             </strong>
 
             <p className="stat-description">
-              Complete your resume analysis
+              Recognized technical skills
             </p>
 
           </div>
@@ -297,7 +320,9 @@ function Dashboard() {
             <div className="upload-content">
 
               <h3>
-                Upload your resume
+                {loading
+                  ? "Analyzing your resume..."
+                  : "Upload your resume"}
               </h3>
 
               <p>
@@ -310,13 +335,15 @@ function Dashboard() {
                 type="button"
                 className="dashboard-primary-btn"
                 onClick={handleUploadClick}
-                disabled={uploading}
+                disabled={loading}
               >
-                {uploading
-                  ? "Uploading..."
+                {loading
+                  ? "Analyzing..."
                   : "Upload Resume"}
 
-                {!uploading && <span>→</span>}
+                <span>
+                  →
+                </span>
               </button>
 
               <input
@@ -343,18 +370,6 @@ function Dashboard() {
                 </div>
               )}
 
-              {uploadSuccess && (
-                <div
-                  style={{
-                    marginTop: "10px",
-                    color: "#4ade80",
-                    fontSize: "12px",
-                  }}
-                >
-                  ✓ {uploadSuccess}
-                </div>
-              )}
-
               {uploadError && (
                 <div
                   style={{
@@ -373,40 +388,69 @@ function Dashboard() {
 
         </section>
 
-        {/* ACTIVITY */}
+        {/* ANALYSIS RESULT */}
 
-        <section className="activity-section">
+        {analysis && (
+          <section className="activity-section">
 
-          <div className="dashboard-section-label">
-            ACTIVITY
-          </div>
-
-          <div className="section-title-row">
-
-            <h2>
-              Recent analyses
-            </h2>
-
-          </div>
-
-          <div className="empty-activity">
-
-            <div className="empty-icon">
-              ✦
+            <div className="dashboard-section-label">
+              RESUME ANALYSIS
             </div>
 
-            <h3>
-              No analyses yet
-            </h3>
+            <div className="section-title-row">
 
-            <p>
-              Upload your resume to see your first
-              career intelligence report here.
-            </p>
+              <h2>
+                Your career intelligence
+              </h2>
 
-          </div>
+            </div>
 
-        </section>
+            <div className="empty-activity">
+
+              <div className="empty-icon">
+                ✓
+              </div>
+
+              <h3>
+                Resume Score: {analysis.score}
+              </h3>
+
+              <p>
+                {analysis.summary}
+              </p>
+
+              {analysis.skills?.length > 0 && (
+                <div
+                  style={{
+                    marginTop: "20px",
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "8px",
+                    justifyContent: "center",
+                  }}
+                >
+                  {analysis.skills.map(
+                    (skill: string, index: number) => (
+                      <span
+                        key={index}
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: "20px",
+                          background: "#1f2937",
+                          fontSize: "12px",
+                        }}
+                      >
+                        {skill}
+                      </span>
+                    )
+                  )}
+                </div>
+              )}
+
+            </div>
+
+          </section>
+        )}
 
       </main>
 
