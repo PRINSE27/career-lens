@@ -1,0 +1,545 @@
+/* ========================================
+   CAREERLENS DASHBOARD
+======================================== */
+
+.dashboard-page {
+  min-height: 100vh;
+  display: flex;
+  background: #09090b;
+  color: #f5f5f5;
+}
+
+/* ================================
+   SIDEBAR
+================================ */
+
+.dashboard-sidebar {
+  width: 245px;
+  min-height: 100vh;
+
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  padding: 28px 18px;
+
+  border-right: 1px solid #18181b;
+  background: #0c0c0f;
+}
+
+.dashboard-logo {
+  padding: 0 12px;
+
+  font-size: 22px;
+  font-weight: 750;
+  letter-spacing: -0.8px;
+}
+
+.dashboard-logo span {
+  color: #8b5cf6;
+}
+
+.dashboard-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  margin-top: 55px;
+}
+
+.dashboard-nav-item,
+.dashboard-logout {
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 11px 13px;
+
+  border: none;
+  border-radius: 9px;
+
+  color: #71717a;
+  background: transparent;
+
+  font-size: 14px;
+  text-align: left;
+
+  text-decoration: none;
+
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+}
+
+.dashboard-nav-item span,
+.dashboard-logout span {
+  width: 20px;
+
+  display: inline-flex;
+  justify-content: center;
+
+  font-size: 16px;
+}
+
+.dashboard-nav-item:hover,
+.dashboard-logout:hover {
+  color: #e4e4e7;
+  background: #18181b;
+}
+
+.dashboard-nav-item.active {
+  color: #ffffff;
+  background: rgba(124, 58, 237, 0.15);
+}
+
+.dashboard-nav-item.active span {
+  color: #a78bfa;
+}
+
+.dashboard-sidebar-bottom {
+  margin-top: auto;
+
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.dashboard-logout {
+  cursor: pointer;
+}
+
+/* ================================
+   MAIN
+================================ */
+
+.dashboard-main {
+  width: calc(100% - 245px);
+
+  margin-left: 245px;
+
+  padding: 45px 55px 70px;
+}
+
+/* ================================
+   HEADER
+================================ */
+
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.dashboard-eyebrow,
+.dashboard-section-label {
+  margin: 0;
+
+  color: #8b5cf6;
+
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+}
+
+.dashboard-header h1 {
+  margin-top: 10px;
+
+  font-size: clamp(30px, 4vw, 44px);
+  line-height: 1.05;
+
+  letter-spacing: -2px;
+}
+
+.dashboard-subtitle {
+  margin-top: 10px;
+
+  color: #71717a;
+
+  font-size: 14px;
+}
+
+.dashboard-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 8px 12px;
+
+  border: 1px solid #27272a;
+  border-radius: 12px;
+
+  background: #111113;
+}
+
+.dashboard-avatar {
+  width: 38px;
+  height: 38px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  color: white;
+  background: #7c3aed;
+
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.dashboard-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dashboard-user-info strong {
+  font-size: 13px;
+}
+
+.dashboard-user-info span {
+  color: #71717a;
+  font-size: 11px;
+}
+
+/* ================================
+   STATS
+================================ */
+
+.dashboard-stats {
+  max-width: 1200px;
+
+  margin: 45px auto 0;
+
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+
+  gap: 14px;
+}
+
+.dashboard-stat-card {
+  min-height: 145px;
+
+  display: flex;
+  flex-direction: column;
+
+  padding: 23px;
+
+  border: 1px solid #27272a;
+  border-radius: 14px;
+
+  background: #0f0f12;
+}
+
+.stat-label {
+  color: #71717a;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  letter-spacing: 1.3px;
+}
+
+.stat-value {
+  margin-top: 20px;
+
+  color: #a78bfa;
+
+  font-size: 32px;
+  line-height: 1;
+}
+
+.stat-description {
+  margin-top: auto;
+
+  color: #52525b;
+
+  font-size: 11px;
+}
+
+/* ================================
+   SECTIONS
+================================ */
+
+.resume-section,
+.activity-section {
+  max-width: 1200px;
+
+  margin: 60px auto 0;
+}
+
+.section-title-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.section-title-row h2 {
+  margin-top: 8px;
+
+  font-size: 24px;
+  letter-spacing: -0.8px;
+}
+
+/* ================================
+   RESUME UPLOAD
+================================ */
+
+.resume-upload-card {
+  margin-top: 22px;
+
+  min-height: 245px;
+
+  display: flex;
+  align-items: center;
+  gap: 25px;
+
+  padding: 35px;
+
+  border: 1px dashed #3f3f46;
+  border-radius: 16px;
+
+  background:
+    radial-gradient(
+      circle at 15% 50%,
+      rgba(124, 58, 237, 0.1),
+      transparent 35%
+    ),
+    #0f0f12;
+}
+
+.upload-icon {
+  width: 70px;
+  height: 70px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 16px;
+
+  color: #a78bfa;
+  background: rgba(124, 58, 237, 0.1);
+
+  font-size: 28px;
+}
+
+.upload-content h3 {
+  font-size: 20px;
+}
+
+.upload-content p {
+  max-width: 650px;
+
+  margin-top: 9px;
+
+  color: #71717a;
+
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.dashboard-primary-btn {
+  margin-top: 18px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 11px 17px;
+
+  border: none;
+  border-radius: 9px;
+
+  color: white;
+  background: #7c3aed;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.dashboard-primary-btn:hover {
+  background: #8b5cf6;
+
+  transform: translateY(-1px);
+}
+
+.dashboard-primary-btn span {
+  font-size: 16px;
+}
+
+.upload-content small {
+  display: block;
+
+  margin-top: 10px;
+
+  color: #52525b;
+
+  font-size: 10px;
+}
+
+/* ================================
+   ACTIVITY
+================================ */
+
+.empty-activity {
+  margin-top: 22px;
+
+  min-height: 190px;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 30px;
+
+  border: 1px solid #27272a;
+  border-radius: 14px;
+
+  background: #0f0f12;
+
+  text-align: center;
+}
+
+.empty-icon {
+  width: 40px;
+  height: 40px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  color: #a78bfa;
+  background: rgba(124, 58, 237, 0.1);
+}
+
+.empty-activity h3 {
+  margin-top: 13px;
+
+  font-size: 16px;
+}
+
+.empty-activity p {
+  max-width: 400px;
+
+  margin-top: 7px;
+
+  color: #71717a;
+
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* ================================
+   RESPONSIVE
+================================ */
+
+@media (max-width: 900px) {
+
+  .dashboard-sidebar {
+    width: 210px;
+  }
+
+  .dashboard-main {
+    width: calc(100% - 210px);
+
+    margin-left: 210px;
+
+    padding: 35px 25px 60px;
+  }
+
+  .dashboard-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-user-info {
+    display: none;
+  }
+}
+
+@media (max-width: 700px) {
+
+  .dashboard-page {
+    display: block;
+  }
+
+  .dashboard-sidebar {
+    width: 100%;
+    min-height: auto;
+
+    position: relative;
+
+    padding: 18px;
+
+    border-right: none;
+    border-bottom: 1px solid #18181b;
+  }
+
+  .dashboard-nav {
+    flex-direction: row;
+
+    margin-top: 20px;
+
+    overflow-x: auto;
+  }
+
+  .dashboard-nav-item {
+    width: auto;
+    flex-shrink: 0;
+  }
+
+  .dashboard-sidebar-bottom {
+    display: none;
+  }
+
+  .dashboard-main {
+    width: 100%;
+
+    margin-left: 0;
+
+    padding: 30px 18px 50px;
+  }
+
+  .dashboard-header {
+    align-items: flex-start;
+  }
+
+  .dashboard-user {
+    display: none;
+  }
+
+  .dashboard-header h1 {
+    font-size: 30px;
+  }
+
+  .resume-upload-card {
+    flex-direction: column;
+
+    align-items: flex-start;
+
+    padding: 25px;
+  }
+}

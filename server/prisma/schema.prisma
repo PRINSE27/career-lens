@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String?
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  resumes   Resume[]
+  analyses  ResumeAnalysis[]
+}
+
+model Resume {
+  id            Int      @id @default(autoincrement())
+  fileName      String
+  filePath      String
+  fileSize      Int
+  extractedText String?
+  uploadedAt    DateTime @default(now())
+
+  userId        Int
+  user          User     @relation(fields: [userId], references: [id])
+
+  analysis      ResumeAnalysis?
+}
+
+
+model ResumeAnalysis {
+  id          Int      @id @default(autoincrement())
+
+  resumeId    Int      @unique
+  userId      Int
+
+  score       Int?
+  summary     String?
+
+  skills      Json?
+  education   Json?
+  experience  Json?
+  projects    Json?
+  skillGaps   Json?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  resume      Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

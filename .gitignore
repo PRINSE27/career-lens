@@ -31,3 +31,11 @@ uploads/
 
 # Prisma
 prisma/*.db
+
+# Generated Prisma Client
+server/src/generated/prisma/
+
+# AI / Editor tool files
+.windsurf/
+.claude/
+.agents/
