@@ -15,8 +15,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  resumes   Resume[]
-  analyses  ResumeAnalysis[]
+  resumes  Resume[]
+  analyses ResumeAnalysis[]
 }
 
 model Resume {
@@ -27,31 +27,58 @@ model Resume {
   extractedText String?
   uploadedAt    DateTime @default(now())
 
-  userId        Int
-  user          User     @relation(fields: [userId], references: [id])
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
 
-  analysis      ResumeAnalysis?
+  analysis ResumeAnalysis?
 }
 
-
 model ResumeAnalysis {
-  id          Int      @id @default(autoincrement())
+  id       Int @id @default(autoincrement())
+  resumeId Int @unique
+  userId   Int
 
-  resumeId    Int      @unique
-  userId      Int
+  // ============================================================
+  // EXTRACTED RESUME INFORMATION
+  // ============================================================
 
-  score       Int?
-  summary     String?
+  personalInfo        Json?
+  professionalSummary String?
 
-  skills      Json?
-  education   Json?
-  experience  Json?
-  projects    Json?
-  skillGaps   Json?
+  skills         Json?
+  education      Json?
+  experience     Json?
+  projects       Json?
+  certifications Json?
+  achievements   Json?
+  softSkills     Json?
+  keywords       Json?
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  // ============================================================
+  // AI ANALYSIS
+  // ============================================================
 
-  resume      Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  score           Int?
+  summary         String?
+  strengths       Json?
+  weaknesses      Json?
+  skillGaps       Json?
+  recommendations Json?
+
+  atsAnalysis       Json?
+  careerSuggestions Json?
+
+  // ============================================================
+  // TIMESTAMPS
+  // ============================================================
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ============================================================
+  // RELATIONS
+  // ============================================================
+
+  resume Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

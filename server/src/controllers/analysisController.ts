@@ -89,48 +89,122 @@ export const analyzeResume = async (
     // STEP 3: Save everything in PostgreSQL
     // --------------------------------------------------------
 
-    const analysis =
-      await prisma.resumeAnalysis.upsert({
-        where: {
-          resumeId: resume.id,
-        },
+ const analysis = await prisma.resumeAnalysis.upsert({
+  where: {
+    resumeId: resume.id,
+  },
 
-        update: {
-          score: aiAnalysis.score,
+  update: {
+    personalInfo: profile.personalInfo,
 
-          summary: aiAnalysis.summary,
+    professionalSummary:
+      profile.professionalSummary,
 
-          skills: profile.skills,
+    skills: profile.skills,
 
-          education: profile.education,
+    education: profile.education,
 
-          experience: profile.experience,
+    experience: profile.experience,
 
-          projects: profile.projects,
+    projects: profile.projects,
 
-          skillGaps: aiAnalysis.skillGaps,
-        },
+    certifications:
+      profile.certifications,
 
-        create: {
-          resumeId: resume.id,
+    achievements:
+      profile.achievements,
 
-          userId: req.userId,
+    softSkills:
+      profile.softSkills,
 
-          score: aiAnalysis.score,
+    keywords:
+      profile.keywords,
 
-          summary: aiAnalysis.summary,
+    score:
+      aiAnalysis.score,
 
-          skills: profile.skills,
+    summary:
+      aiAnalysis.summary,
 
-          education: profile.education,
+    strengths:
+      aiAnalysis.strengths,
 
-          experience: profile.experience,
+    weaknesses:
+      aiAnalysis.weaknesses,
 
-          projects: profile.projects,
+    skillGaps:
+      aiAnalysis.skillGaps,
 
-          skillGaps: aiAnalysis.skillGaps,
-        },
-      });
+    recommendations:
+      aiAnalysis.recommendations,
+
+    atsAnalysis:
+      aiAnalysis.atsAnalysis,
+
+    careerSuggestions:
+      aiAnalysis.careerSuggestions,
+  },
+
+create: {
+    resumeId: resume.id,
+
+    userId: req.userId,
+
+    personalInfo:
+      profile.personalInfo,
+
+    professionalSummary:
+      profile.professionalSummary,
+
+    skills:
+      profile.skills,
+
+    education:
+      profile.education,
+
+    experience:
+      profile.experience,
+
+    projects:
+      profile.projects,
+
+    certifications:
+      profile.certifications,
+
+    achievements:
+      profile.achievements,
+
+    softSkills:
+      profile.softSkills,
+
+    keywords:
+      profile.keywords,
+
+    score:
+      aiAnalysis.score,
+
+    summary:
+      aiAnalysis.summary,
+
+    strengths:
+      aiAnalysis.strengths,
+
+    weaknesses:
+      aiAnalysis.weaknesses,
+
+    skillGaps:
+      aiAnalysis.skillGaps,
+
+    recommendations:
+      aiAnalysis.recommendations,
+
+    atsAnalysis:
+      aiAnalysis.atsAnalysis,
+
+    careerSuggestions:
+      aiAnalysis.careerSuggestions,
+  },
+});
 
     // --------------------------------------------------------
     // Return AI result
