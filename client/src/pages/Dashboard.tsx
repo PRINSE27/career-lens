@@ -2,11 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Dashboard.css";
 
-type SkillGap = {
-  skill: string;
-  reason: string;
-  priority: "high" | "medium" | "low" | string;
-};
+
 
 const displayValue = (value: unknown): string => {
   if (value === null || value === undefined) {
@@ -786,17 +782,12 @@ function Dashboard() {
                   marginTop: "20px",
                 }}
               >
-
-               {skillGaps.map((item, index) => (
+{skillGaps.map((item, index) => (
   <div key={index} className="skill-gap-item">
     <div>
-      <strong>{item.skill}</strong>
-      <p>{item.reason}</p>
+      <strong>{item}</strong>
+      <p>AI identified this as a potential skill gap based on your resume.</p>
     </div>
-
-    <span className={`priority ${item.priority}`}>
-      {item.priority}
-    </span>
   </div>
 ))}
 
