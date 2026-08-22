@@ -724,22 +724,15 @@ function Dashboard() {
             <span>▣</span>
             My Resumes
           </button>
-
-          <button
-            className="dashboard-nav-item"
-            onClick={() =>
-              document
-                .getElementById(
-                  "career-section"
-                )
-                ?.scrollIntoView({
-                  behavior: "smooth",
-                })
-            }
-          >
-            <span>↗</span>
-            Job Matches
-          </button>
+<button
+  className="dashboard-nav-item"
+  onClick={() =>
+    navigate("/job-matches")
+  }
+>
+  <span>↗</span>
+  Job Matches
+</button>
 
           <button
             className="dashboard-nav-item"

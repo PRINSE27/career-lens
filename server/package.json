@@ -10,7 +10,6 @@
     "start": "node dist/server.js"
   },
   "allowScripts": {
-    "@napi-rs/canvas": true,
     "@prisma/engines": true,
     "esbuild": true,
     "prisma": true
@@ -29,7 +28,7 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.2.0",
     "openai": "^7.4.0",
-    "pdf-parse": "^1.1.1",
+    "pdf-parse-debugging-disabled": "^1.1.1",
     "pg": "^8.23.0",
     "prisma": "^7.9.1",
     "zod": "^4.4.3"
@@ -41,7 +40,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.2.0",
     "@types/node": "^26.2.0",
-    "@types/pdf-parse": "^1.1.5",
+
     "@types/pg": "^8.21.0",
     "tsx": "^4.23.11",
     "typescript": "^7.0.2"

@@ -9,11 +9,20 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
+import JobMatches from "./pages/JobMatches";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+<Route
+  path="/job-matches"
+  element={
+    <ProtectedRoute>
+      <JobMatches />
+    </ProtectedRoute>
+  }
+/>
 
         {/* Public Home Page */}
         <Route
@@ -33,14 +42,27 @@ function App() {
         />
 
         {/* Protected Pages */}
-        <Route element={<ProtectedRoute />}>
+{/* Protected Pages */}
 
-          <Route
-            path="/dashboard"
-            element={<Dashboard />}
-          />
+<Route
+  path="/dashboard"
+  element={
+    <ProtectedRoute>
+      <Dashboard />
+    </ProtectedRoute>
+  }
+/>
 
-        </Route>
+<Route
+  path="/job-matches"
+  element={
+    <ProtectedRoute>
+      <JobMatches />
+    </ProtectedRoute>
+  }
+/>
+
+        
 
       </Routes>
     </BrowserRouter>

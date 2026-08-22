@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { put } from "@vercel/blob";
-import pdf from "pdf-parse";
+import pdf from "pdf-parse-debugging-disabled";
 
 import prisma from "../services/prisma.js";
 
@@ -20,8 +20,7 @@ export const uploadResume = async (
     if (!req.userId) {
       return res.status(401).json({
         success: false,
-        message:
-          "Authentication required",
+        message: "Authentication required",
       });
     }
 
@@ -32,19 +31,14 @@ export const uploadResume = async (
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        message:
-          "Resume PDF is required",
+        message: "Resume PDF is required",
       });
     }
 
-    if (
-      req.file.mimetype !==
-      "application/pdf"
-    ) {
+    if (req.file.mimetype !== "application/pdf") {
       return res.status(400).json({
         success: false,
-        message:
-          "Only PDF files are allowed",
+        message: "Only PDF files are allowed",
       });
     }
 
@@ -52,14 +46,12 @@ export const uploadResume = async (
     // PDF buffer
     // ----------------------------------------------------------
 
-    const pdfBuffer =
-      req.file.buffer;
+    const pdfBuffer = req.file.buffer;
 
     if (!pdfBuffer || pdfBuffer.length === 0) {
       return res.status(400).json({
         success: false,
-        message:
-          "Uploaded PDF is empty",
+        message: "Uploaded PDF is empty",
       });
     }
 
@@ -67,25 +59,17 @@ export const uploadResume = async (
     // Upload PDF to Vercel Blob
     // ----------------------------------------------------------
 
-    const safeFileName =
-      req.file.originalname
-        .replace(
-          /[^a-zA-Z0-9._-]/g,
-          "_"
-        );
-
-    const blobPath =
-      `resumes/${req.userId}/${Date.now()}-${safeFileName}`;
-
-    const blob = await put(
-      blobPath,
-      pdfBuffer,
-      {
-        access: "private",
-        contentType:
-          "application/pdf",
-      }
+    const safeFileName = req.file.originalname.replace(
+      /[^a-zA-Z0-9._-]/g,
+      "_"
     );
+
+    const blobPath = `resumes/${req.userId}/${Date.now()}-${safeFileName}`;
+
+    const blob = await put(blobPath, pdfBuffer, {
+      access: "private",
+      contentType: "application/pdf",
+    });
 
     console.log(
       `Resume uploaded to Vercel Blob: ${blob.url}`
@@ -94,12 +78,13 @@ export const uploadResume = async (
     // ----------------------------------------------------------
     // Extract text from PDF buffer
     // ----------------------------------------------------------
-const pdfData = await pdf(pdfBuffer);
 
-const extractedText =
-  typeof pdfData.text === "string"
-    ? pdfData.text.trim()
-    : "";
+    const pdfData = await pdf(pdfBuffer);
+
+    const extractedText =
+      typeof pdfData.text === "string"
+        ? pdfData.text.trim()
+        : "";
 
     // ----------------------------------------------------------
     // Make sure text was extracted
@@ -108,8 +93,7 @@ const extractedText =
     if (!extractedText) {
       return res.status(400).json({
         success: false,
-        message:
-          "Could not extract text from this PDF",
+        message: "Could not extract text from this PDF",
       });
     }
 
@@ -117,28 +101,18 @@ const extractedText =
     // Save resume in PostgreSQL
     // ----------------------------------------------------------
     //
-    // filePath now stores the persistent Vercel Blob URL
-    // instead of a local server/uploads path.
+    // filePath stores the persistent Vercel Blob URL.
     // ----------------------------------------------------------
 
-    const resume =
-      await prisma.resume.create({
-        data: {
-          fileName:
-            req.file.originalname,
-
-          filePath:
-            blob.url,
-
-          fileSize:
-            req.file.size,
-
-          extractedText,
-
-          userId:
-            req.userId,
-        },
-      });
+    const resume = await prisma.resume.create({
+      data: {
+        fileName: req.file.originalname,
+        filePath: blob.url,
+        fileSize: req.file.size,
+        extractedText,
+        userId: req.userId,
+      },
+    });
 
     // ----------------------------------------------------------
     // Response
@@ -146,28 +120,16 @@ const extractedText =
 
     return res.status(201).json({
       success: true,
-
-      message:
-        "Resume uploaded and processed successfully",
-
+      message: "Resume uploaded and processed successfully",
       resume: {
         id: resume.id,
-
-        fileName:
-          resume.fileName,
-
-        fileSize:
-          resume.fileSize,
-
-        uploadedAt:
-          resume.uploadedAt,
+        fileName: resume.fileName,
+        fileSize: resume.fileSize,
+        uploadedAt: resume.uploadedAt,
       },
     });
   } catch (error) {
-    console.error(
-      "Resume processing error:",
-      error
-    );
+    console.error("Resume processing error:", error);
 
     return res.status(500).json({
       success: false,

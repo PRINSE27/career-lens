@@ -10,6 +10,19 @@ node_modules/
 dist/
 build/
 
+# TypeScript build output in src (legacy, before outDir fix)
+server/src/**/*.js
+server/src/**/*.js.map
+server/src/**/*.d.ts
+server/src/**/*.d.ts.map
+!server/src/type/*.d.ts
+
+# Prisma config build artifacts
+server/prisma.config.js
+server/prisma.config.js.map
+server/prisma.config.d.ts
+server/prisma.config.d.ts.map
+
 # Logs
 *.log
 
@@ -38,4 +51,4 @@ server/src/generated/prisma/
 # AI / Editor tool files
 .windsurf/
 .claude/
-.agents/
+.agents/
