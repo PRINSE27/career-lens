@@ -9,6 +9,12 @@
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js"
   },
+  "allowScripts": {
+  "@napi-rs/canvas": true,
+  "@prisma/engines": true,
+  "esbuild": true,
+  "prisma": true
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
