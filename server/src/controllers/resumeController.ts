@@ -1,7 +1,6 @@
 import type { Request, Response } from "express";
 import { put } from "@vercel/blob";
-import { CanvasFactory } from "pdf-parse/worker";
-import { PDFParse } from "pdf-parse";
+import pdf from "pdf-parse";
 
 import prisma from "../services/prisma.js";
 
@@ -95,20 +94,12 @@ export const uploadResume = async (
     // ----------------------------------------------------------
     // Extract text from PDF buffer
     // ----------------------------------------------------------
+const pdfData = await pdf(pdfBuffer);
 
-  const parser =
-  new PDFParse({
-    data: pdfBuffer,
-    CanvasFactory,
-  });
-
-    const pdfData =
-      await parser.getText();
-
-    const extractedText =
-      pdfData.text.trim();
-
-    await parser.destroy();
+const extractedText =
+  typeof pdfData.text === "string"
+    ? pdfData.text.trim()
+    : "";
 
     // ----------------------------------------------------------
     // Make sure text was extracted
